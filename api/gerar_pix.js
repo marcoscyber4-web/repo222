@@ -1,49 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-function jsonResponse(res, data, code = 200) {
-  res.status(code);
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  return res.json(data);
-}
-
-function loadEnvFile(filePath) {
-  try {
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-      return;
-    }
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
-    
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed === '' || trimmed[0] === '#') continue;
-      
-      const pos = trimmed.indexOf('=');
-      if (pos === -1) continue;
-      
-      const key = trimmed.substring(0, pos).trim();
-      let val = trimmed.substring(pos + 1).trim();
-      
-      if (val !== '' && (val[0] === '"' || val[0] === "'")) {
-        val = val.slice(1, -1);
-      }
-      
-      if (key !== '') {
-        process.env[key] = val;
-      }
-    }
-  } catch (error) {
-    // Ignore errors
-  }
-}
-
-function gerarTelefone11Digitos() {
-  const ddd = String(Math.floor(Math.random() * 89) + 11).padStart(2, '0');
-  const resto = '9' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
-  return ddd + resto;
-}
-
+// API convertida de PHP para Node.js (compatível com Vercel)
 module.exports = async (req, res) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -54,7 +9,7 @@ module.exports = async (req, res) => {
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse(res, { success: false, message: 'Método não permitido' }, 405);
+    return res.status(405).json({ success: false, message: 'Método não permitido' });
   }
 
   let input;
@@ -67,21 +22,27 @@ module.exports = async (req, res) => {
       input = body || {};
     }
   } catch (error) {
-    return jsonResponse(res, { success: false, message: 'JSON inválido' }, 400);
+    return res.status(400).json({ success: false, message: 'JSON inválido' });
   }
 
   if (!input || typeof input !== 'object') {
-    return jsonResponse(res, { success: false, message: 'JSON inválido' }, 400);
+    return res.status(400).json({ success: false, message: 'JSON inválido' });
   }
 
   const nome = (input.nome || '').trim();
   let cpf = (input.cpf || '').replace(/\D/g, '');
 
   if (nome === '' || cpf === '' || cpf.length < 11) {
-    return jsonResponse(res, { 
+    return res.status(400).json({ 
       success: false, 
       message: 'Dados insuficientes: nome e CPF são obrigatórios' 
-    }, 400);
+    });
+  }
+
+  function gerarTelefone11Digitos() {
+    const ddd = String(Math.floor(Math.random() * 89) + 11).padStart(2, '0');
+    const resto = '9' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+    return ddd + resto;
   }
 
   const buyerPhone = gerarTelefone11Digitos();
@@ -96,18 +57,15 @@ module.exports = async (req, res) => {
     },
   };
 
-  // Carrega .env do projeto (um nível acima deste arquivo)
-  const envPath = path.join(__dirname, '..', '.env');
-  loadEnvFile(envPath);
-
+  // Carrega variáveis de ambiente
   const publicKey = process.env.PLUGGOU_PUBLIC_KEY || '';
   const secretKey = process.env.PLUGGOU_SECRET_KEY || '';
 
   if (publicKey === '' || secretKey === '') {
-    return jsonResponse(res, {
+    return res.status(500).json({
       success: false,
       message: 'Chaves da Pluggou não configuradas. Defina PLUGGOU_PUBLIC_KEY e PLUGGOU_SECRET_KEY no ambiente.'
-    }, 500);
+    });
   }
 
   const url = 'https://api.pluggoutech.com/api/transactions';
@@ -136,29 +94,29 @@ module.exports = async (req, res) => {
     try {
       api = JSON.parse(responseBody);
     } catch (error) {
-      return jsonResponse(res, { 
+      return res.status(502).json({ 
         success: false, 
         message: 'Resposta inválida da Pluggou', 
         httpStatus: statusCode 
-      }, 502);
+      });
     }
 
     if (!api || typeof api !== 'object') {
-      return jsonResponse(res, { 
+      return res.status(502).json({ 
         success: false, 
         message: 'Resposta inválida da Pluggou', 
         httpStatus: statusCode 
-      }, 502);
+      });
     }
 
     const apiSuccess = api.success === true;
     if (!apiSuccess) {
       const message = api.message || 'Falha ao criar pagamento';
-      return jsonResponse(res, { 
+      return res.status(400).json({ 
         success: false, 
         message: message, 
         httpStatus: statusCode 
-      }, 400);
+      });
     }
 
     const data = api.data || {};
@@ -166,10 +124,10 @@ module.exports = async (req, res) => {
     const emv = String(data.pix?.emv || '');
 
     if (transactionId === '' || emv === '') {
-      return jsonResponse(res, { 
+      return res.status(502).json({ 
         success: false, 
         message: 'Resposta da Pluggou incompleta' 
-      }, 502);
+      });
     }
 
     const tomorrow = new Date();
@@ -186,11 +144,12 @@ module.exports = async (req, res) => {
       status: 'waiting_payment',
     };
 
-    return jsonResponse(res, normalized, 200);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.status(200).json(normalized);
   } catch (error) {
-    return jsonResponse(res, { 
+    return res.status(502).json({ 
       success: false, 
       message: 'Erro de rede: ' + error.message 
-    }, 502);
+    });
   }
 };

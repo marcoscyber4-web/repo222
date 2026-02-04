@@ -1,3 +1,4 @@
+// API convertida de PHP para Node.js (compatível com Vercel)
 module.exports = async (req, res) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -7,24 +8,22 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  const cpf = req.query.cpf || '';
+  const cpf = (req.query.cpf || '').replace(/\D/g, '');
 
-  if (!cpf || cpf.length < 11) {
-    res.status(400);
+  if (cpf === '' || cpf.length < 11) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    return res.json({
+    return res.status(400).json({
       success: false,
-      message: 'CPF inválido',
+      message: 'CPF inválido'
     });
   }
 
   // Retorna que não encontrou no banco local
   // (implementar lógica de banco de dados se necessário)
-  res.status(200);
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  return res.json({
+  return res.status(200).json({
     success: false,
     message: 'CPF não encontrado no banco local',
-    data: null,
+    data: null
   });
 };
