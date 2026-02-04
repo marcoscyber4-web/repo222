@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/gerar_pix.php",
+      "destination": "/api/gerar_pix"
+    },
+    {
+      "source": "/api/buscar_cpf_local.php",
+      "destination": "/api/buscar_cpf_local"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "receita-site",
+  "version": "1.0.0",
+  "description": "Serviço de consulta",
+  "scripts": {
+    "build": "echo 'Build complete'"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {}
+}
